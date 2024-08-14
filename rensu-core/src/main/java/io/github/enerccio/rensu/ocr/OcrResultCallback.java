@@ -2,6 +2,6 @@ package io.github.enerccio.rensu.ocr;
 
 public interface OcrResultCallback {
 
-    void onResult(long id, String result, Throwable exception);
+    void onResult(long id, Object result, Throwable exception);
 
 }

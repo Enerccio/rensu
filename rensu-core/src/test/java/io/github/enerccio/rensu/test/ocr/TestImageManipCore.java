@@ -56,7 +56,7 @@ public class TestImageManipCore {
         id = new Random().nextInt();
         rensu.process(id, data, Arrays.asList(new TikkaOcrProcessor(), new StringTrimProcessor()), (id, result, exception) -> {
             this.recId = id;
-            this.result = result;
+            this.result = (String) result;
             this.exception = exception;
         });
 
@@ -74,7 +74,7 @@ public class TestImageManipCore {
         id = new Random().nextInt();
         rensu.process(id, data, Arrays.asList(brightnessProcessor, new TikkaOcrProcessor(), new StringTrimProcessor()), (id, result, exception) -> {
             this.recId = id;
-            this.result = result;
+            this.result = (String) result;
             this.exception = exception;
         });
 
@@ -90,7 +90,7 @@ public class TestImageManipCore {
         id = new Random().nextInt();
         rensu.process(id, data2, Arrays.asList(new TikkaOcrProcessor(), new StringTrimProcessor()), (id, result, exception) -> {
             this.recId = id;
-            this.result = result;
+            this.result = (String) result;
             this.exception = exception;
         });
 
@@ -108,7 +108,7 @@ public class TestImageManipCore {
         id = new Random().nextInt();
         rensu.process(id, data2, Arrays.asList(desaturationProcessor, new TikkaOcrProcessor(), new StringTrimProcessor()), (id, result, exception) -> {
             this.recId = id;
-            this.result = result;
+            this.result = (String) result;
             this.exception = exception;
         });
 

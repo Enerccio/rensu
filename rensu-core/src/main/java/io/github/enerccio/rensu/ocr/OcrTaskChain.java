@@ -1,6 +1,5 @@
 package io.github.enerccio.rensu.ocr;
 
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 public class OcrTaskChain {
@@ -23,7 +22,7 @@ public class OcrTaskChain {
                 OcrProcessor processor = processors.get(pos);
                 ocr.enqueue(processor, id, data, this);
             } else {
-                callback.onResult(id, new String(data, StandardCharsets.UTF_8), null);
+                callback.onResult(id, null, new IllegalStateException("end of chain reached without resolution"));
             }
         } catch (Exception e) {
             callback.onResult(id, null, e);
@@ -41,5 +40,9 @@ public class OcrTaskChain {
     @Override
     public String toString() {
         return getClass().getSimpleName() + ": processor=" + processors.get(pos);
+    }
+
+    public void finish(long id, Object result) {
+        callback.onResult(id, result, null);
     }
 }

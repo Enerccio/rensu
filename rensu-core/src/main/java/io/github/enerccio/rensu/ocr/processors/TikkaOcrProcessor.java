@@ -24,8 +24,6 @@ public class TikkaOcrProcessor implements OcrProcessor {
     public TikkaOcrProcessor() {
         config = new TesseractOCRConfig();
         config.setLanguage("jpn");
-//        config.setLanguage("jpn_vert");
-        config.setEnableImageProcessing(1);
         imageParser = new AutoDetectParser(TikaConfig.getDefaultConfig());
         pdfConfig = new PDFParserConfig();
         pdfConfig.setExtractInlineImages(true);

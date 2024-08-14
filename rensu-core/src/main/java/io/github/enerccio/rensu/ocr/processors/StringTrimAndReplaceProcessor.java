@@ -5,12 +5,12 @@ import io.github.enerccio.rensu.ocr.OcrTaskChain;
 
 import java.nio.charset.StandardCharsets;
 
-public class StringTrimProcessor implements OcrProcessor {
+public class StringTrimAndReplaceProcessor implements OcrProcessor {
 
     @Override
     public void process(long id, byte[] input, OcrTaskChain chain) throws Exception {
         String i = new String(input, StandardCharsets.UTF_8);
-        chain.finish(id, i.replaceAll("\\s", ""));
+        chain.finish(id, i.replaceAll("\\s", "").replaceAll("\\p{Punct}", ""));
     }
 
     @Override

@@ -4,7 +4,7 @@ import io.github.enerccio.rensu.ocr.OcrProcessor;
 import io.github.enerccio.rensu.ocr.OcrTaskChain;
 
 import javax.imageio.ImageIO;
-import java.awt.*;
+import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -17,7 +17,7 @@ public class ImageDesaturationProcessor implements OcrProcessor {
         this.factor = factor;
     }
 
-    private static int adjust_saturation(int argb, float factor) {
+    public static int adjustSaturation(int argb, float factor) {
         float[] hsb = new float[3];
         int red = (argb >> 16) & 0xff;
         int green = (argb >> 8) & 0xff;
@@ -33,7 +33,7 @@ public class ImageDesaturationProcessor implements OcrProcessor {
         for (int x = 0; x < image.getWidth(); x++) {
             for (int y = 0; y < image.getHeight(); y++) {
                 int argb = image.getRGB(x, y);
-                image.setRGB(x, y, adjust_saturation(argb, factor));
+                image.setRGB(x, y, adjustSaturation(argb, factor));
             }
         }
 

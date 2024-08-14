@@ -47,7 +47,7 @@ public class TestTikkaCore {
         id = new Random().nextInt();
         rensu.process(id, data, Arrays.asList(new TikkaOcrProcessor(), new StringTrimProcessor()), (id, result, exception) -> {
             this.recId = id;
-            this.result = result;
+            this.result = (String) result;
             this.exception = exception;
         });
 
