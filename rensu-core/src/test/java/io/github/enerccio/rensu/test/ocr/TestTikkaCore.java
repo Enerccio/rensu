@@ -2,7 +2,7 @@ package io.github.enerccio.rensu.test.ocr;
 
 import io.github.enerccio.rensu.ocr.RensuOcr;
 import io.github.enerccio.rensu.ocr.processors.StringTrimProcessor;
-import io.github.enerccio.rensu.ocr.processors.TikkaOcrProcessor;
+import io.github.enerccio.rensu.ocr.processors.TesseractOcrProcessor;
 import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,7 +45,7 @@ public class TestTikkaCore {
     @Test
     public void basicOcr() throws Exception {
         id = new Random().nextInt();
-        rensu.process(id, data, Arrays.asList(new TikkaOcrProcessor(), new StringTrimProcessor()), (id, result, exception) -> {
+        rensu.process(id, data, Arrays.asList(new TesseractOcrProcessor(), new StringTrimProcessor()), (id, result, exception) -> {
             this.recId = id;
             this.result = (String) result;
             this.exception = exception;

@@ -3,6 +3,7 @@ package io.github.enerccio.rensu.app.config;
 import io.github.enerccio.rensu.ocr.OcrProcessor;
 import io.github.enerccio.rensu.ocr.processors.ImageBrightnessContrastProcessor;
 import io.github.enerccio.rensu.ocr.processors.ImageDesaturationProcessor;
+import io.github.enerccio.rensu.ocr.processors.TesseractOcrProcessor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,6 +16,10 @@ public class RensuProfile {
     private float saturation = 1.0f;
     private boolean vertical;
     private int pollingFrequency = 500;
+    private String ocr;
+    private String tesseractLocation;
+    private String tesseractDataLocation;
+    private String tesseractLanguage;
 
     public String getName() {
         return name;
@@ -62,6 +67,56 @@ public class RensuProfile {
 
     public void setPollingFrequency(int pollingFrequency) {
         this.pollingFrequency = pollingFrequency;
+    }
+
+    public String getOcr() {
+        return ocr;
+    }
+
+    public void setOcr(String ocr) {
+        this.ocr = ocr;
+    }
+
+    public String getTesseractLocation() {
+        return tesseractLocation;
+    }
+
+    public void setTesseractLocation(String tesseractLocation) {
+        this.tesseractLocation = tesseractLocation;
+    }
+
+    public String getTesseractDataLocation() {
+        return tesseractDataLocation;
+    }
+
+    public void setTesseractDataLocation(String tesseractDataLocation) {
+        this.tesseractDataLocation = tesseractDataLocation;
+    }
+
+    public String getTesseractLanguage() {
+        return tesseractLanguage;
+    }
+
+    public void setTesseractLanguage(String tesseractLanguage) {
+        this.tesseractLanguage = tesseractLanguage;
+    }
+
+    public OcrProcessor getOcrProcessorByProvider() {
+        if (ocr == null || ocr.equals(Processors.TESSERACT)) {
+            TesseractOcrProcessor processor = new TesseractOcrProcessor();
+            if (tesseractLanguage != null) {
+                processor.getConfig().setLanguage(tesseractLanguage);
+            }
+            if (tesseractLocation != null) {
+                processor.getConfig().setTesseractPath(tesseractLocation);
+            }
+            if (tesseractDataLocation != null) {
+                processor.getConfig().setTessdataPath(tesseractDataLocation);
+            }
+            return processor;
+        }
+
+        throw new IllegalStateException("Unknown processor " + ocr);
     }
 
     public List<OcrProcessor> toProcessors() {

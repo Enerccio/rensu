@@ -3,6 +3,7 @@ package io.github.enerccio.rensu.ui;
 import io.github.enerccio.rensu.app.HasApplicationContext;
 import io.github.enerccio.rensu.app.Poller;
 import io.github.enerccio.rensu.app.config.ConfigContainer;
+import io.github.enerccio.rensu.app.config.Processors;
 import io.github.enerccio.rensu.app.config.RensuProfile;
 import io.github.enerccio.rensu.ocr.OcrProcessor;
 import io.github.enerccio.rensu.ocr.RensuOcrST;
@@ -18,6 +19,9 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.List;
+
+import static io.github.enerccio.rensu.ocr.processors.TesseractOcrProcessor.LANGUAGE_JPN;
+import static io.github.enerccio.rensu.ocr.processors.TesseractOcrProcessor.LANGUAGE_JPN_VERT;
 
 public class MainWindow extends JFrame implements HasApplicationContext {
 
@@ -36,8 +40,13 @@ public class MainWindow extends JFrame implements HasApplicationContext {
     private JSlider desaturation;
     private JButton start;
     private JButton stop;
+    private JComboBox<String> ocr;
+    private JComboBox<String> tesseractLanguage;
+    private JTextField tesseractPath;
+    private JTextField tesseractDataPath;
 
     private BufferedImage testImage;
+    private boolean inLoad = false;
 
     private void disableAllControls() {
         deviceSelector.setEnabled(false);
@@ -47,6 +56,13 @@ public class MainWindow extends JFrame implements HasApplicationContext {
         contrast.setEnabled(false);
         brightness.setEnabled(false);
         desaturation.setEnabled(false);
+
+        ocr.setEnabled(false);
+        if (ocr.getSelectedItem() == Processors.TESSERACT) {
+            tesseractLanguage.setEnabled(false);
+            tesseractPath.setEnabled(false);
+            tesseractDataPath.setEnabled(false);
+        }
     }
 
     private void enableAllControls() {
@@ -57,6 +73,13 @@ public class MainWindow extends JFrame implements HasApplicationContext {
         contrast.setEnabled(true);
         brightness.setEnabled(true);
         desaturation.setEnabled(true);
+
+        ocr.setEnabled(true);
+        if (ocr.getSelectedItem() == Processors.TESSERACT) {
+            tesseractLanguage.setEnabled(true);
+            tesseractPath.setEnabled(true);
+            tesseractDataPath.setEnabled(true);
+        }
     }
 
     public void create() throws Exception {
@@ -68,20 +91,79 @@ public class MainWindow extends JFrame implements HasApplicationContext {
         createDisplaySelector();
         createAreaSelector();
         createTestFrame();
-        createButtons();
+        createOcrSection();
+        loadFromSettings();
 
         pack();
     }
 
-    private void createButtons() {
+    private void loadFromSettings() {
+        loadFromSettings(false);
+    }
+
+    private void loadFromSettings(boolean skipOcrSelection) {
+        inLoad = true;
+
+        try {
+            // TODO: multiple profiles
+            ConfigContainer cc = getApplicationContext().getBean(ConfigContainer.class);
+            RensuProfile profile = cc.getGlobalProfile();
+            contrast.setValue(profile.getContrast());
+            brightness.setValue((int) (127 * profile.getBrightness()));
+            desaturation.setValue((int) (255 * profile.getSaturation()));
+
+            if (!skipOcrSelection) {
+                if (profile.getOcr() == null || profile.getOcr().equals(Processors.TESSERACT)) {
+                    ocr.setSelectedItem(Processors.TESSERACT);
+                } else if (Processors.MANGA.equals(profile.getOcr())) {
+                    ocr.setSelectedItem(Processors.MANGA);
+                }
+            }
+
+            if (ocr.getSelectedItem() == Processors.TESSERACT) {
+                tesseractLanguage.setSelectedItem(profile.getTesseractLanguage() == null ?
+                        LANGUAGE_JPN : profile.getTesseractLanguage());
+                tesseractDataPath.setText(profile.getTesseractDataLocation());
+                tesseractPath.setText(profile.getTesseractLocation());
+            }
+        } finally {
+            inLoad = false;
+        }
+    }
+
+    private void createOcrSection() {
         JPanel mainSection = new JPanel();
         getContentPane().add(mainSection);
-        mainSection.setLayout(new BoxLayout(mainSection, BoxLayout.X_AXIS));
+        mainSection.setLayout(new BoxLayout(mainSection, BoxLayout.Y_AXIS));
         mainSection.setBorder(BorderFactory.createTitledBorder(
                 BorderFactory.createEtchedBorder(), "OCR"));
 
+        JPanel settingsPanel = new JPanel();
+        settingsPanel.setBorder(BorderFactory.createCompoundBorder());
+        settingsPanel.setLayout(new BoxLayout(settingsPanel, BoxLayout.Y_AXIS));
+
+        ocr = new JComboBox<>();
+        ocr.addItem(Processors.TESSERACT);
+        ocr.addItem(Processors.MANGA);
+        ocr.addActionListener(event -> {
+            settingsPanel.removeAll();
+            if (ocr.getSelectedItem() == Processors.TESSERACT) {
+                loadTesseractSettings(settingsPanel);
+            }
+            loadFromSettings(true);
+            saveSettings();
+            pack();
+        });
+
+        mainSection.add(ocr);
+        mainSection.add(settingsPanel);
+
+        JPanel buttons = new JPanel();
+        mainSection.add(buttons);
+        buttons.setLayout(new BoxLayout(buttons, BoxLayout.X_AXIS));
+
         start = new JButton("Start");
-        mainSection.add(start);
+        buttons.add(start);
         start.addActionListener(event -> {
             start.setEnabled(false);
             getApplicationContext().getBean(Poller.class).setProcess(true);
@@ -91,7 +173,7 @@ public class MainWindow extends JFrame implements HasApplicationContext {
         start.setEnabled(false);
 
         stop = new JButton("Stop");
-        mainSection.add(stop);
+        buttons.add(stop);
         stop.addActionListener(event -> {
             stop.setEnabled(false);
             getApplicationContext().getBean(Poller.class).setProcess(false);
@@ -99,6 +181,24 @@ public class MainWindow extends JFrame implements HasApplicationContext {
             start.setEnabled(true);
         });
         stop.setEnabled(false);
+    }
+
+    private void loadTesseractSettings(JPanel settingsPanel) {
+        tesseractLanguage = new JComboBox<>();
+        tesseractLanguage.addItem(LANGUAGE_JPN);
+        tesseractLanguage.addItem(LANGUAGE_JPN_VERT);
+        tesseractLanguage.addActionListener(event -> saveSettings());
+        settingsPanel.add(new JLabel("Language: "));
+        settingsPanel.add(tesseractLanguage);
+
+        tesseractPath = new JTextField();
+        tesseractPath.addActionListener(event -> saveSettings());
+        settingsPanel.add(new JLabel("Tesseract path: "));
+        settingsPanel.add(tesseractPath);
+        tesseractDataPath = new JTextField();
+        tesseractDataPath.addActionListener(event -> saveSettings());
+        settingsPanel.add(new JLabel("Tesseract data path: "));
+        settingsPanel.add(tesseractDataPath);
     }
 
     private void createTestFrame() {
@@ -140,13 +240,6 @@ public class MainWindow extends JFrame implements HasApplicationContext {
         brightness.setMaximum(255);
         mainSection.add(brightness);
 
-        // TODO: multiple profiles
-        ConfigContainer cc = getApplicationContext().getBean(ConfigContainer.class);
-        RensuProfile profile = cc.getGlobalProfile();
-        contrast.setValue(profile.getContrast());
-        brightness.setValue((int) (127 * profile.getBrightness()));
-        desaturation.setValue((int) (255 * profile.getSaturation()));
-
         desaturation.addChangeListener(event -> {
             saveSettings();
             applyEffects();
@@ -171,6 +264,9 @@ public class MainWindow extends JFrame implements HasApplicationContext {
     }
 
     private void saveSettings() {
+        if (inLoad)
+            return;
+
         // TODO: profiles
 
         ConfigContainer cc = getApplicationContext().getBean(ConfigContainer.class);
@@ -178,6 +274,20 @@ public class MainWindow extends JFrame implements HasApplicationContext {
         profile.setContrast(contrast.getValue());
         profile.setBrightness((brightness.getValue() / 127f));
         profile.setSaturation(desaturation.getValue() / 255.0f);
+
+        if (ocr.getSelectedItem() == null) {
+            profile.setOcr(Processors.TESSERACT);
+            profile.setTesseractDataLocation(null);
+            profile.setTesseractLanguage("jpn");
+            profile.setTesseractLocation(null);
+        } else if (ocr.getSelectedItem() == Processors.TESSERACT) {
+            profile.setOcr(Processors.TESSERACT);
+            profile.setTesseractDataLocation(tesseractDataPath.getText());
+            profile.setTesseractLanguage(tesseractLanguage.getSelectedItem() == null ? "jpn" : (String) tesseractLanguage.getSelectedItem());
+            profile.setTesseractLocation(tesseractPath.getText());
+        } else if (ocr.getSelectedItem() == Processors.MANGA) {
+            profile.setOcr(Processors.MANGA);
+        }
 
         try {
             cc.save();

@@ -14,21 +14,14 @@ import org.apache.tika.sax.BodyContentHandler;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 
-public class TikkaOcrProcessor implements OcrProcessor {
+public class TesseractOcrProcessor implements OcrProcessor {
 
     private Parser imageParser;
     private TesseractOCRConfig config;
     private PDFParserConfig pdfConfig;
     private Metadata metadata;
 
-    public TikkaOcrProcessor() {
-        config = new TesseractOCRConfig();
-        config.setLanguage("jpn");
-        imageParser = new AutoDetectParser(TikaConfig.getDefaultConfig());
-        pdfConfig = new PDFParserConfig();
-        pdfConfig.setExtractInlineImages(true);
-        metadata = new Metadata();
-    }
+    public static final String LANGUAGE_JPN = "jpn";
 
     @Override
     public void process(long id, byte[] input, OcrTaskChain chain) throws Exception {
@@ -83,5 +76,14 @@ public class TikkaOcrProcessor implements OcrProcessor {
                 ", pdfConfig=" + pdfConfig +
                 ", metadata=" + metadata +
                 '}';
+    }
+    public static final String LANGUAGE_JPN_VERT = "jpn_ver";
+    public TesseractOcrProcessor() {
+        config = new TesseractOCRConfig();
+        config.setLanguage("jpn");
+        imageParser = new AutoDetectParser(TikaConfig.getDefaultConfig());
+        pdfConfig = new PDFParserConfig();
+        pdfConfig.setExtractInlineImages(true);
+        metadata = new Metadata();
     }
 }

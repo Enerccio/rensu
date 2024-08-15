@@ -10,7 +10,6 @@ import io.github.enerccio.rensu.app.config.RensuProfile;
 import io.github.enerccio.rensu.ocr.OcrProcessor;
 import io.github.enerccio.rensu.ocr.RensuOcr;
 import io.github.enerccio.rensu.ocr.processors.StringTrimProcessor;
-import io.github.enerccio.rensu.ocr.processors.TikkaOcrProcessor;
 import org.apache.commons.lang3.StringUtils;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
@@ -23,10 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
-import java.awt.GraphicsDevice;
-import java.awt.Rectangle;
-import java.awt.Robot;
-import java.awt.Toolkit;
+import java.awt.*;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.StringSelection;
@@ -237,7 +233,7 @@ public class Poller extends Thread implements InitializingBean, DisposableBean {
 
             List<OcrProcessor> pl = profile.toProcessors();
             processors = new ArrayList<>(pl);
-            processors.add(new TikkaOcrProcessor());
+            processors.add(profile.getOcrProcessorByProvider());
             processors.add(new StringTrimProcessor());
 
             lastImage = null;

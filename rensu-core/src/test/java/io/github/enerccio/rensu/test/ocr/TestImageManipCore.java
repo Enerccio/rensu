@@ -4,7 +4,7 @@ import io.github.enerccio.rensu.ocr.RensuOcr;
 import io.github.enerccio.rensu.ocr.processors.ImageBrightnessContrastProcessor;
 import io.github.enerccio.rensu.ocr.processors.ImageDesaturationProcessor;
 import io.github.enerccio.rensu.ocr.processors.StringTrimProcessor;
-import io.github.enerccio.rensu.ocr.processors.TikkaOcrProcessor;
+import io.github.enerccio.rensu.ocr.processors.TesseractOcrProcessor;
 import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,7 +54,7 @@ public class TestImageManipCore {
     @Test
     public void noBrightnessTest() throws Exception {
         id = new Random().nextInt();
-        rensu.process(id, data, Arrays.asList(new TikkaOcrProcessor(), new StringTrimProcessor()), (id, result, exception) -> {
+        rensu.process(id, data, Arrays.asList(new TesseractOcrProcessor(), new StringTrimProcessor()), (id, result, exception) -> {
             this.recId = id;
             this.result = (String) result;
             this.exception = exception;
@@ -72,7 +72,7 @@ public class TestImageManipCore {
         ImageBrightnessContrastProcessor brightnessProcessor = new ImageBrightnessContrastProcessor(1.2f, 50);
 
         id = new Random().nextInt();
-        rensu.process(id, data, Arrays.asList(brightnessProcessor, new TikkaOcrProcessor(), new StringTrimProcessor()), (id, result, exception) -> {
+        rensu.process(id, data, Arrays.asList(brightnessProcessor, new TesseractOcrProcessor(), new StringTrimProcessor()), (id, result, exception) -> {
             this.recId = id;
             this.result = (String) result;
             this.exception = exception;
@@ -88,7 +88,7 @@ public class TestImageManipCore {
     @Test
     public void noDesatTest() throws Exception {
         id = new Random().nextInt();
-        rensu.process(id, data2, Arrays.asList(new TikkaOcrProcessor(), new StringTrimProcessor()), (id, result, exception) -> {
+        rensu.process(id, data2, Arrays.asList(new TesseractOcrProcessor(), new StringTrimProcessor()), (id, result, exception) -> {
             this.recId = id;
             this.result = (String) result;
             this.exception = exception;
@@ -106,7 +106,7 @@ public class TestImageManipCore {
         ImageDesaturationProcessor desaturationProcessor = new ImageDesaturationProcessor(0);
 
         id = new Random().nextInt();
-        rensu.process(id, data2, Arrays.asList(desaturationProcessor, new TikkaOcrProcessor(), new StringTrimProcessor()), (id, result, exception) -> {
+        rensu.process(id, data2, Arrays.asList(desaturationProcessor, new TesseractOcrProcessor(), new StringTrimProcessor()), (id, result, exception) -> {
             this.recId = id;
             this.result = (String) result;
             this.exception = exception;
