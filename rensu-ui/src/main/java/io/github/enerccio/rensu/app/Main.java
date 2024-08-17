@@ -1,9 +1,6 @@
 package io.github.enerccio.rensu.app;
 
 import io.github.enerccio.rensu.ui.MainWindow;
-import javassist.ClassPool;
-import javassist.CtClass;
-import javassist.CtMethod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
@@ -56,30 +53,6 @@ public class Main extends EventQueue {
         } catch (Exception e) {
             log.error("Main failed with {}", e.getMessage());
             log.debug(e.getMessage(), e);
-        }
-    }
-
-
-    static {
-        try {
-            ClassPool classPool = ClassPool.getDefault();
-            CtClass ctClass = classPool.get("sun.awt.screencast.ScreencastHelper");
-            ctClass.stopPruning(true);
-
-            if (ctClass.isFrozen())
-                ctClass.defrost();
-
-            CtMethod method = ctClass.getDeclaredMethod("timerCloseSessionRestart");
-            ctClass.removeMethod(method);
-
-            method = CtMethod.make("private static void timerCloseSessionRestart() {}", ctClass);
-            ctClass.addMethod(method);
-            ctClass.toClass();
-
-            classPool.toClass(ctClass, Thread.currentThread().getContextClassLoader().getParent(), null);
-        } catch (Throwable e) {
-            log.error(e.getMessage(), e);
-            throw new RuntimeException(e);
         }
     }
 
