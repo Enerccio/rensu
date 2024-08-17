@@ -23,6 +23,7 @@ public class RensuProfile implements HasApplicationContext {
     private String tesseractDataLocation;
     private String tesseractLanguage;
     private byte[] googleCredentials;
+    private String customCommand;
 
     public String getName() {
         return name;
@@ -112,6 +113,14 @@ public class RensuProfile implements HasApplicationContext {
         this.googleCredentials = googleCredentials;
     }
 
+    public String getCustomCommand() {
+        return customCommand;
+    }
+
+    public void setCustomCommand(String customCommand) {
+        this.customCommand = customCommand;
+    }
+
     public List<OcrProcessor> getOcrProcessorByProvider() {
         if (ocr == null || ocr.equals(Processors.TESSERACT)) {
             TesseractOcrProcessor processor = new TesseractOcrProcessor();
@@ -129,6 +138,8 @@ public class RensuProfile implements HasApplicationContext {
             GoogleVisionProcessor processor = new GoogleVisionProcessor(getApplicationContext().getBean(GoogleVisionContainer.class).getClient(
                     new String(getGoogleCredentials(), StandardCharsets.UTF_8)));
             return Collections.singletonList(processor);
+        } else if (ocr.equals(Processors.CUSTOM)) {
+            return Collections.singletonList(new CustomOCRProcessor(getCustomCommand()));
         }
 
         throw new IllegalStateException("Unknown processor " + ocr);

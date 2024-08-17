@@ -50,6 +50,7 @@ public class MainWindow extends JFrame implements HasApplicationContext {
     private JTextField tesseractPath;
     private JTextField tesseractDataPath;
     private JButton googleJsonFileLocation;
+    private JTextField customCommand;
 
     private BufferedImage testImage;
     private boolean inLoad = false;
@@ -71,6 +72,8 @@ public class MainWindow extends JFrame implements HasApplicationContext {
             tesseractDataPath.setEnabled(false);
         } else if (ocr.getSelectedItem() == Processors.GOOGLE_VISION) {
             googleJsonFileLocation.setEnabled(false);
+        } else if (ocr.getSelectedItem() == Processors.CUSTOM) {
+            customCommand.setEnabled(false);
         }
     }
 
@@ -90,6 +93,8 @@ public class MainWindow extends JFrame implements HasApplicationContext {
             tesseractDataPath.setEnabled(true);
         } else if (ocr.getSelectedItem() == Processors.GOOGLE_VISION) {
             googleJsonFileLocation.setEnabled(true);
+        } else if (ocr.getSelectedItem() == Processors.CUSTOM) {
+            customCommand.setEnabled(true);
         }
     }
 
@@ -128,6 +133,8 @@ public class MainWindow extends JFrame implements HasApplicationContext {
                     ocr.setSelectedItem(Processors.TESSERACT);
                 } else if (Processors.GOOGLE_VISION.equals(profile.getOcr())) {
                     ocr.setSelectedItem(Processors.GOOGLE_VISION);
+                } else if (Processors.CUSTOM.equals(profile.getOcr())) {
+                    ocr.setSelectedItem(Processors.CUSTOM);
                 }
             }
 
@@ -136,6 +143,8 @@ public class MainWindow extends JFrame implements HasApplicationContext {
                         LANGUAGE_JPN : profile.getTesseractLanguage());
                 tesseractDataPath.setText(profile.getTesseractDataLocation());
                 tesseractPath.setText(profile.getTesseractLocation());
+            } else if (ocr.getSelectedItem() == Processors.CUSTOM) {
+                customCommand.setText(profile.getCustomCommand());
             }
         } finally {
             inLoad = false;
@@ -156,12 +165,15 @@ public class MainWindow extends JFrame implements HasApplicationContext {
         ocr = new JComboBox<>();
         ocr.addItem(Processors.TESSERACT);
         ocr.addItem(Processors.GOOGLE_VISION);
+        ocr.addItem(Processors.CUSTOM);
         ocr.addActionListener(event -> {
             settingsPanel.removeAll();
             if (ocr.getSelectedItem() == Processors.TESSERACT) {
                 loadTesseractSettings(settingsPanel);
             } else if (ocr.getSelectedItem() == Processors.GOOGLE_VISION) {
                 loadGoogleVisionSettings(settingsPanel);
+            } else if (ocr.getSelectedItem() == Processors.CUSTOM) {
+                loadCustomSettings(settingsPanel);
             }
             loadFromSettings(true);
             saveSettings();
@@ -218,6 +230,13 @@ public class MainWindow extends JFrame implements HasApplicationContext {
         googleJsonFileLocation = new JButton("Upload json credentials");
         googleJsonFileLocation.addActionListener(event -> loadGoogleCredentials());
         settingsPanel.add(googleJsonFileLocation);
+    }
+
+    private void loadCustomSettings(JPanel settingsPanel) {
+        settingsPanel.add(new JLabel("Custom command: "));
+        customCommand = new JTextField("Custom command");
+        customCommand.addActionListener(event -> saveSettings());
+        settingsPanel.add(customCommand);
     }
 
     private void loadGoogleCredentials() {
@@ -336,6 +355,9 @@ public class MainWindow extends JFrame implements HasApplicationContext {
             profile.setOcr(Processors.GOOGLE_VISION);
             if (lastCredentials != null)
                 profile.setGoogleCredentials(lastCredentials.getBytes(StandardCharsets.UTF_8));
+        } else if (ocr.getSelectedItem() == Processors.CUSTOM) {
+            profile.setOcr(Processors.CUSTOM);
+            profile.setCustomCommand(customCommand.getText());
         }
 
         try {
