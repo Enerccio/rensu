@@ -30,6 +30,7 @@ import java.io.ByteArrayOutputStream;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 public class Poller extends Thread implements InitializingBean, DisposableBean {
 
@@ -58,6 +59,9 @@ public class Poller extends Thread implements InitializingBean, DisposableBean {
     private volatile long lastId = Long.MIN_VALUE;
     private int cumulatedSameImage = 0;
     private boolean requireNewImage = false;
+    private boolean copyToClipboard = false;
+
+    private Consumer<String> callback;
 
     @SuppressWarnings({"InfiniteLoopStatement", "BusyWait"})
     @Override
@@ -123,14 +127,17 @@ public class Poller extends Thread implements InitializingBean, DisposableBean {
             }
 
             SwingUtilities.invokeLater(() -> {
-                Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
-                clipboard.setContents(selection, selection);
+                if (copyToClipboard) {
+                    Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+                    clipboard.setContents(selection, selection);
 
-                try {
-                    clipboard.getContents(null).getTransferData(DataFlavor.stringFlavor);
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
+                    try {
+                        clipboard.getContents(null).getTransferData(DataFlavor.stringFlavor);
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
                 }
+                callback.accept(result);
             });
         }
     }
@@ -252,5 +259,9 @@ public class Poller extends Thread implements InitializingBean, DisposableBean {
     @Override
     public void destroy() throws Exception {
         interrupt();
+    }
+
+    public void setCallback(Consumer<String> callback) {
+        this.callback = callback;
     }
 }

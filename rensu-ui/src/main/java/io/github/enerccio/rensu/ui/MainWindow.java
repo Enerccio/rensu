@@ -17,6 +17,7 @@ import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.BevelBorder;
 import javax.swing.filechooser.FileFilter;
+import javax.swing.text.DefaultCaret;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
@@ -51,6 +52,7 @@ public class MainWindow extends JFrame implements HasApplicationContext {
     private JTextField tesseractDataPath;
     private JButton googleJsonFileLocation;
     private JTextField customCommand;
+    private JTextArea output;
 
     private BufferedImage testImage;
     private boolean inLoad = false;
@@ -110,6 +112,11 @@ public class MainWindow extends JFrame implements HasApplicationContext {
         createOcrSection();
         loadFromSettings();
 
+        getApplicationContext().getBean(Poller.class).setCallback(text -> {
+            output.append("\n" + text);
+            output.setCaretPosition(output.getDocument().getLength());
+        });
+
         pack();
     }
 
@@ -145,6 +152,10 @@ public class MainWindow extends JFrame implements HasApplicationContext {
                 tesseractPath.setText(profile.getTesseractLocation());
             } else if (ocr.getSelectedItem() == Processors.CUSTOM) {
                 customCommand.setText(profile.getCustomCommand());
+            } else if (ocr.getSelectedItem() == Processors.GOOGLE_VISION) {
+                if (profile.getGoogleCredentials() != null) {
+                    googleJsonFileLocation.setText("Upload json credentials - SET");
+                }
             }
         } finally {
             inLoad = false;
@@ -206,6 +217,17 @@ public class MainWindow extends JFrame implements HasApplicationContext {
             start.setEnabled(true);
         });
         stop.setEnabled(false);
+
+        output = new JTextArea();
+        JScrollPane pane = new JScrollPane(output);
+        pane.createVerticalScrollBar();
+        pane.setMinimumSize(new Dimension(600, 450));
+        pane.setPreferredSize(new Dimension(600, 450));
+        output.setEnabled(true);
+        DefaultCaret caret = (DefaultCaret) output.getCaret();
+        caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
+
+        mainSection.add(pane);
     }
 
     private void loadTesseractSettings(JPanel settingsPanel) {
@@ -229,7 +251,10 @@ public class MainWindow extends JFrame implements HasApplicationContext {
     private void loadGoogleVisionSettings(JPanel settingsPanel) {
         googleJsonFileLocation = new JButton("Upload json credentials");
         googleJsonFileLocation.addActionListener(event -> loadGoogleCredentials());
-        settingsPanel.add(googleJsonFileLocation);
+        JPanel panel = new JPanel();
+        panel.setLayout(new BorderLayout());
+        panel.add(googleJsonFileLocation, BorderLayout.CENTER);
+        settingsPanel.add(panel);
     }
 
     private void loadCustomSettings(JPanel settingsPanel) {
@@ -263,6 +288,7 @@ public class MainWindow extends JFrame implements HasApplicationContext {
                 return;
             }
             lastCredentials = jsonData;
+            googleJsonFileLocation.setText("Upload json credentials - SET");
             saveSettings();
         }
     }

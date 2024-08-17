@@ -301,7 +301,7 @@
             </activation>
             <properties>
                 <platform>linux</platform>
-                <app.home>${user.home}/.rensu</app.home>
+                <app.home>.rensu</app.home>
             </properties>
             <build>
                 <resources>
@@ -321,6 +321,7 @@
             </activation>
             <properties>
                 <platform>win</platform>
+                <app.home>.rensu</app.home>
             </properties>
             <build>
                 <resources>
@@ -342,6 +343,7 @@
             </activation>
             <properties>
                 <platform>mac</platform>
+                <app.home>.rensu</app.home>
             </properties>
         </profile>
     </profiles>
