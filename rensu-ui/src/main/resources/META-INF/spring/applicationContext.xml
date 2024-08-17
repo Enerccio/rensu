@@ -18,4 +18,6 @@
 
     <bean id="ocr" class="io.github.enerccio.rensu.ocr.RensuOcr"/>
 
+    <bean id="gvFactory" class="io.github.enerccio.rensu.app.config.GoogleVisionContainer"/>
+
 </beans>

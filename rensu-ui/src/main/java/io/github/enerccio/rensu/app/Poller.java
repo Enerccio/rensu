@@ -9,7 +9,6 @@ import io.github.enerccio.rensu.app.config.ConfigContainer;
 import io.github.enerccio.rensu.app.config.RensuProfile;
 import io.github.enerccio.rensu.ocr.OcrProcessor;
 import io.github.enerccio.rensu.ocr.RensuOcr;
-import io.github.enerccio.rensu.ocr.processors.StringTrimProcessor;
 import org.apache.commons.lang3.StringUtils;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
@@ -36,26 +35,29 @@ public class Poller extends Thread implements InitializingBean, DisposableBean {
 
     private static final Logger log = LoggerFactory.getLogger(Poller.class);
     private static final Gson gson = new GsonBuilder().create();
-    private final HashingAlgorithm hasher = new PerceptiveHash(32);
-    boolean hasWs = false;
+    private final int waitCount = 5; // we need same 5 images before we submit
+
     @Autowired
     private ConfigContainer configContainer;
     @Autowired
     private RensuOcr ocr;
+
+    private final HashingAlgorithm hasher = new PerceptiveHash(32);
+    private final List<WebSocket> clients = new ArrayList<>();
     private WebSocketServer server;
     private GraphicsDevice screen;
     private Rectangle screenRegion;
-    private Robot robot;
     private BufferedImage lastImage;
     private Hash lastImageHash;
-    private int pollingSpeed = 1000;
+    boolean hasWs = false;
     private volatile boolean process;
     private List<OcrProcessor> processors;
-    private List<WebSocket> clients = new ArrayList<>();
+    private int pollingSpeed = 200;
 
     private volatile String lastText;
     private volatile long lastId = Long.MIN_VALUE;
-    private boolean enableHashing = false;
+    private int cumulatedSameImage = 0;
+    private boolean requireNewImage = false;
 
     @SuppressWarnings({"InfiniteLoopStatement", "BusyWait"})
     @Override
@@ -136,34 +138,41 @@ public class Poller extends Thread implements InitializingBean, DisposableBean {
     public void setRegion(GraphicsDevice device, Rectangle screenRegion) throws Exception {
         this.screen = device;
         this.screenRegion = screenRegion;
-        this.robot = new Robot(screen);
         lastImage = null;
         lastImageHash = null;
-
-        takeScreenCapture();
     }
 
-    private boolean takeScreenCapture() {
+    private boolean takeScreenCapture() throws Exception {
+        Robot robot = new Robot(screen);
         BufferedImage bufferedImage = robot.createScreenCapture(screenRegion);
-        if (lastImage == null || !enableHashing) {
+        if (lastImage == null) {
             lastImage = bufferedImage;
             lastImageHash = hasher.hash(lastImage);
-            return true;
+            cumulatedSameImage = 0;
+            requireNewImage = false;
+            return false;
         } else {
             Hash hash = hasher.hash(bufferedImage);
             if (lastImageHash.normalizedHammingDistanceFast(hash) < 0.1) {
-                return false;
+                ++cumulatedSameImage;
+                if (cumulatedSameImage > waitCount && !requireNewImage) {
+                    requireNewImage = true;
+                    return true;
+                } else {
+                    return false;
+                }
             } else {
                 lastImage = bufferedImage;
                 lastImageHash = hash;
+                requireNewImage = false;
                 return true;
             }
         }
     }
 
-    public synchronized BufferedImage takeCapture() {
-        takeScreenCapture();
-        return lastImage;
+    public synchronized BufferedImage takeCapture() throws AWTException {
+        Robot robot = new Robot(screen);
+        return robot.createScreenCapture(screenRegion);
     }
 
     @Override
@@ -223,7 +232,6 @@ public class Poller extends Thread implements InitializingBean, DisposableBean {
         screen = null;
         lastImage = null;
         lastImageHash = null;
-        robot = null;
     }
 
     public void setProcess(boolean process) {
@@ -233,8 +241,7 @@ public class Poller extends Thread implements InitializingBean, DisposableBean {
 
             List<OcrProcessor> pl = profile.toProcessors();
             processors = new ArrayList<>(pl);
-            processors.add(profile.getOcrProcessorByProvider());
-            processors.add(new StringTrimProcessor());
+            processors.addAll(profile.getOcrProcessorByProvider());
 
             lastImage = null;
             lastImageHash = null;
@@ -246,5 +253,4 @@ public class Poller extends Thread implements InitializingBean, DisposableBean {
     public void destroy() throws Exception {
         interrupt();
     }
-
 }

@@ -7,17 +7,22 @@ import io.github.enerccio.rensu.app.config.Processors;
 import io.github.enerccio.rensu.app.config.RensuProfile;
 import io.github.enerccio.rensu.ocr.OcrProcessor;
 import io.github.enerccio.rensu.ocr.RensuOcrST;
+import io.github.enerccio.rensu.ocr.processors.GoogleVisionProcessor;
 import io.github.enerccio.rensu.ocr.processors.TerminalReturnNodeProcessor;
+import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.BevelBorder;
+import javax.swing.filechooser.FileFilter;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static io.github.enerccio.rensu.ocr.processors.TesseractOcrProcessor.LANGUAGE_JPN;
@@ -44,9 +49,11 @@ public class MainWindow extends JFrame implements HasApplicationContext {
     private JComboBox<String> tesseractLanguage;
     private JTextField tesseractPath;
     private JTextField tesseractDataPath;
+    private JButton googleJsonFileLocation;
 
     private BufferedImage testImage;
     private boolean inLoad = false;
+    private String lastCredentials;
 
     private void disableAllControls() {
         deviceSelector.setEnabled(false);
@@ -62,6 +69,8 @@ public class MainWindow extends JFrame implements HasApplicationContext {
             tesseractLanguage.setEnabled(false);
             tesseractPath.setEnabled(false);
             tesseractDataPath.setEnabled(false);
+        } else if (ocr.getSelectedItem() == Processors.GOOGLE_VISION) {
+            googleJsonFileLocation.setEnabled(false);
         }
     }
 
@@ -79,6 +88,8 @@ public class MainWindow extends JFrame implements HasApplicationContext {
             tesseractLanguage.setEnabled(true);
             tesseractPath.setEnabled(true);
             tesseractDataPath.setEnabled(true);
+        } else if (ocr.getSelectedItem() == Processors.GOOGLE_VISION) {
+            googleJsonFileLocation.setEnabled(true);
         }
     }
 
@@ -115,8 +126,8 @@ public class MainWindow extends JFrame implements HasApplicationContext {
             if (!skipOcrSelection) {
                 if (profile.getOcr() == null || profile.getOcr().equals(Processors.TESSERACT)) {
                     ocr.setSelectedItem(Processors.TESSERACT);
-                } else if (Processors.MANGA.equals(profile.getOcr())) {
-                    ocr.setSelectedItem(Processors.MANGA);
+                } else if (Processors.GOOGLE_VISION.equals(profile.getOcr())) {
+                    ocr.setSelectedItem(Processors.GOOGLE_VISION);
                 }
             }
 
@@ -144,11 +155,13 @@ public class MainWindow extends JFrame implements HasApplicationContext {
 
         ocr = new JComboBox<>();
         ocr.addItem(Processors.TESSERACT);
-        ocr.addItem(Processors.MANGA);
+        ocr.addItem(Processors.GOOGLE_VISION);
         ocr.addActionListener(event -> {
             settingsPanel.removeAll();
             if (ocr.getSelectedItem() == Processors.TESSERACT) {
                 loadTesseractSettings(settingsPanel);
+            } else if (ocr.getSelectedItem() == Processors.GOOGLE_VISION) {
+                loadGoogleVisionSettings(settingsPanel);
             }
             loadFromSettings(true);
             saveSettings();
@@ -199,6 +212,40 @@ public class MainWindow extends JFrame implements HasApplicationContext {
         tesseractDataPath.addActionListener(event -> saveSettings());
         settingsPanel.add(new JLabel("Tesseract data path: "));
         settingsPanel.add(tesseractDataPath);
+    }
+
+    private void loadGoogleVisionSettings(JPanel settingsPanel) {
+        googleJsonFileLocation = new JButton("Upload json credentials");
+        googleJsonFileLocation.addActionListener(event -> loadGoogleCredentials());
+        settingsPanel.add(googleJsonFileLocation);
+    }
+
+    private void loadGoogleCredentials() {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.addChoosableFileFilter(new FileFilter() {
+            @Override
+            public boolean accept(File f) {
+                return f.isFile() && f.getName().endsWith(".json");
+            }
+
+            @Override
+            public String getDescription() {
+                return "json";
+            }
+        });
+        int result = fileChooser.showOpenDialog(this);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            String jsonData;
+            try {
+                jsonData = FileUtils.readFileToString(fileChooser.getSelectedFile(), StandardCharsets.UTF_8);
+                GoogleVisionProcessor.testCredentials(jsonData);
+            } catch (Throwable e) {
+                UIUtils.onError(this, log, e, "Invalid credentials!");
+                return;
+            }
+            lastCredentials = jsonData;
+            saveSettings();
+        }
     }
 
     private void createTestFrame() {
@@ -285,21 +332,27 @@ public class MainWindow extends JFrame implements HasApplicationContext {
             profile.setTesseractDataLocation(tesseractDataPath.getText());
             profile.setTesseractLanguage(tesseractLanguage.getSelectedItem() == null ? "jpn" : (String) tesseractLanguage.getSelectedItem());
             profile.setTesseractLocation(tesseractPath.getText());
-        } else if (ocr.getSelectedItem() == Processors.MANGA) {
-            profile.setOcr(Processors.MANGA);
+        } else if (ocr.getSelectedItem() == Processors.GOOGLE_VISION) {
+            profile.setOcr(Processors.GOOGLE_VISION);
+            if (lastCredentials != null)
+                profile.setGoogleCredentials(lastCredentials.getBytes(StandardCharsets.UTF_8));
         }
 
         try {
             cc.save();
         } catch (Exception e) {
-            UIUtils.onError(log, e, "Failed to save settings");
+            UIUtils.onError(this, log, e, "Failed to save settings");
         }
     }
 
     private void retakePreviewImage() {
         Poller poller = getApplicationContext().getBean(Poller.class);
         if (poller.getDevice() != null) {
-            testImage = poller.takeCapture();
+            try {
+                testImage = poller.takeCapture();
+            } catch (AWTException e) {
+                UIUtils.onError(this, log, e, e.getMessage());
+            }
         }
         applyEffects();
         pack();
@@ -333,12 +386,12 @@ public class MainWindow extends JFrame implements HasApplicationContext {
                             BufferedImage image = ImageIO.read(new ByteArrayInputStream((byte[]) result));
                             afterChangesImage.setIcon(new ImageIcon(image));
                         } catch (Exception e) {
-                            UIUtils.onError(log, e, "Failed to read image");
+                            UIUtils.onError(this, log, e, "Failed to read image");
                         }
                     }
                 });
             } catch (Exception e) {
-                UIUtils.onError(log, e, "Failed to process image");
+                UIUtils.onError(this, log, e, "Failed to process image");
             }
         }
     }
@@ -394,7 +447,7 @@ public class MainWindow extends JFrame implements HasApplicationContext {
                             retakeImage.setEnabled(true);
                             start.setEnabled(true);
                         } catch (Exception e) {
-                            UIUtils.onError(log, e, "Failed to create screen grabber");
+                            UIUtils.onError(this, log, e, "Failed to create screen grabber");
                         }
                     } else {
                         testImage = null;
@@ -406,7 +459,7 @@ public class MainWindow extends JFrame implements HasApplicationContext {
                     }
                 });
             } catch (Exception e) {
-                UIUtils.onError(log, e, "Failed to open select region window");
+                UIUtils.onError(this, log, e, "Failed to open select region window");
             }
         });
         mainSection.add(grabNewArea, BorderLayout.EAST);

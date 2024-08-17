@@ -1,14 +1,16 @@
 package io.github.enerccio.rensu.app.config;
 
+import io.github.enerccio.rensu.app.HasApplicationContext;
 import io.github.enerccio.rensu.ocr.OcrProcessor;
-import io.github.enerccio.rensu.ocr.processors.ImageBrightnessContrastProcessor;
-import io.github.enerccio.rensu.ocr.processors.ImageDesaturationProcessor;
-import io.github.enerccio.rensu.ocr.processors.TesseractOcrProcessor;
+import io.github.enerccio.rensu.ocr.processors.*;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
-public class RensuProfile {
+public class RensuProfile implements HasApplicationContext {
 
     private String name;
     private float brightness = 1f;
@@ -20,6 +22,7 @@ public class RensuProfile {
     private String tesseractLocation;
     private String tesseractDataLocation;
     private String tesseractLanguage;
+    private byte[] googleCredentials;
 
     public String getName() {
         return name;
@@ -101,7 +104,15 @@ public class RensuProfile {
         this.tesseractLanguage = tesseractLanguage;
     }
 
-    public OcrProcessor getOcrProcessorByProvider() {
+    public byte[] getGoogleCredentials() {
+        return googleCredentials;
+    }
+
+    public void setGoogleCredentials(byte[] googleCredentials) {
+        this.googleCredentials = googleCredentials;
+    }
+
+    public List<OcrProcessor> getOcrProcessorByProvider() {
         if (ocr == null || ocr.equals(Processors.TESSERACT)) {
             TesseractOcrProcessor processor = new TesseractOcrProcessor();
             if (tesseractLanguage != null) {
@@ -113,7 +124,11 @@ public class RensuProfile {
             if (tesseractDataLocation != null) {
                 processor.getConfig().setTessdataPath(tesseractDataLocation);
             }
-            return processor;
+            return Arrays.asList(processor, new StringTrimAndReplaceProcessor());
+        } else if (ocr.equals(Processors.GOOGLE_VISION)) {
+            GoogleVisionProcessor processor = new GoogleVisionProcessor(getApplicationContext().getBean(GoogleVisionContainer.class).getClient(
+                    new String(getGoogleCredentials(), StandardCharsets.UTF_8)));
+            return Collections.singletonList(processor);
         }
 
         throw new IllegalStateException("Unknown processor " + ocr);
